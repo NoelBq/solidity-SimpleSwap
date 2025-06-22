@@ -1,0 +1,33 @@
+{
+  "name": "simple-swap",
+  "version": "1.0.0",
+  "description": "SimpleSwap - A Uniswap-like DEX smart contract implementation",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy.js",
+    "deploy-with-tokens": "npx hardhat run scripts/deployWithTokens.js",
+    "deploy-sepolia": "npx hardhat run scripts/deployWithTokens.js --network sepolia",
+    "deploy-localhost": "npx hardhat run scripts/deployWithTokens.js --network localhost",
+    "node": "npx hardhat node"
+  },
+  "keywords": [
+    "solidity",
+    "ethereum",
+    "defi",
+    "dex",
+    "uniswap",
+    "liquidity",
+    "smart-contracts"
+  ],
+  "author": "Noelia",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.3.1"
+  }
+}

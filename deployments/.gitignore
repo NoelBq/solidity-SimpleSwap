@@ -1,0 +1,4 @@
+# Deployment files are saved here automatically
+# Each deployment creates a timestamped JSON file with contract addresses
+
+*.json
