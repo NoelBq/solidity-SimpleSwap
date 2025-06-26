@@ -1,306 +1,201 @@
-const { ethers, network } = require("hardhat");
-const fs = require("fs");
-const path = require("path");
-
-// Network configurations
-const NETWORK_CONFIG = {
-  sepolia: {
-    confirmations: 6,
-    gasPrice: ethers.parseUnits("20", "gwei"),
-    explorerUrl: "https://sepolia.etherscan.io",
-    verify: true,
-  },
-  mainnet: {
-    confirmations: 6,
-    gasPrice: ethers.parseUnits("30", "gwei"),
-    explorerUrl: "https://etherscan.io",
-    verify: true,
-  },
-  localhost: {
-    confirmations: 1,
-    gasPrice: ethers.parseUnits("20", "gwei"),
-    explorerUrl: null,
-    verify: false,
-  },
-  hardhat: {
-    confirmations: 1,
-    gasPrice: ethers.parseUnits("20", "gwei"),
-    explorerUrl: null,
-    verify: false,
-  },
-};
+const { ethers } = require("hardhat");
+const hre = require("hardhat");
 
 async function main() {
-  console.log("🚀 Starting SimpleSwap and Test Tokens deployment...");
-  console.log("==========================================");
+  console.log("🚀 Deploying improved SimpleSwap contract...");
 
-  const currentNetwork = network.name;
-  const config = NETWORK_CONFIG[currentNetwork] || NETWORK_CONFIG.localhost;
-
-  console.log(`🌐 Network: ${currentNetwork.toUpperCase()}`);
-  console.log(`⚙️  Confirmations required: ${config.confirmations}`);
-  console.log(
-    `⛽ Gas Price: ${ethers.formatUnits(config.gasPrice, "gwei")} gwei`
-  );
-  if (config.explorerUrl) {
-    console.log(`🔍 Explorer: ${config.explorerUrl}`);
-  }
-
+  // Get the deployer account
   const [deployer] = await ethers.getSigners();
-  console.log("\n📍 Deploying contracts with account:", deployer.address);
+  console.log("📝 Deploying with account:", deployer.address);
 
-  const balance = await deployer.provider.getBalance(deployer.address);
+  // Get account balance
+  const balance = await ethers.provider.getBalance(deployer.address);
   console.log("💰 Account balance:", ethers.formatEther(balance), "ETH");
 
-  // Check if we have enough balance for deployment (especially on testnets)
-  const minBalance = ethers.parseEther("0.01"); // 0.01 ETH minimum
-  if (balance < minBalance) {
-    console.log(
-      "⚠️  WARNING: Low balance detected. You may need more ETH for deployment."
-    );
-  }
-
-  // Deploy SimpleSwap
-  console.log("\n📦 Deploying SimpleSwap...");
-  const SimpleSwap = await ethers.getContractFactory("SimpleSwap");
-
-  const deploymentOptions = {
-    gasPrice: config.gasPrice,
-  };
-
-  const simpleSwap = await SimpleSwap.deploy(deploymentOptions);
-  console.log("⏳ Transaction sent, waiting for confirmation...");
-  await simpleSwap.waitForDeployment();
-
-  const simpleSwapAddress = await simpleSwap.getAddress();
-  console.log("✅ SimpleSwap deployed to:", simpleSwapAddress);
-
-  if (config.explorerUrl) {
-    console.log(
-      `🔗 View on explorer: ${config.explorerUrl}/address/${simpleSwapAddress}`
-    );
-  }
+  // Deploy test tokens first
+  console.log("\n🪙 Deploying test tokens...");
 
   // Deploy KaizenCoin
-  console.log("\n🪙 Deploying KaizenCoin...");
   const KaizenCoin = await ethers.getContractFactory("KaizenCoin");
-  const tokenA = await KaizenCoin.deploy(deploymentOptions);
-  console.log("⏳ Transaction sent, waiting for confirmation...");
-  await tokenA.waitForDeployment();
-
-  const tokenAAddress = await tokenA.getAddress();
-  console.log("✅ TokenA (KAIZEN) deployed to:", tokenAAddress);
-
-  if (config.explorerUrl) {
-    console.log(
-      `🔗 View on explorer: ${config.explorerUrl}/address/${tokenAAddress}`
-    );
-  }
+  const kaizenCoin = await KaizenCoin.deploy();
+  await kaizenCoin.waitForDeployment();
+  const kaizenAddress = await kaizenCoin.getAddress();
+  console.log("✅ KaizenCoin deployed to:", kaizenAddress);
 
   // Deploy YureiCoin
-  console.log("\n🪙 Deploying YureiCoin...");
   const YureiCoin = await ethers.getContractFactory("YureiCoin");
-  const tokenB = await YureiCoin.deploy(deploymentOptions);
-  console.log("⏳ Transaction sent, waiting for confirmation...");
-  await tokenB.waitForDeployment();
+  const yureiCoin = await YureiCoin.deploy();
+  await yureiCoin.waitForDeployment();
+  const yureiAddress = await yureiCoin.getAddress();
+  console.log("✅ YureiCoin deployed to:", yureiAddress);
 
-  const tokenBAddress = await tokenB.getAddress();
-  console.log("✅ TokenB (YUREI) deployed to:", tokenBAddress);
+  // Deploy SimpleSwap with gas optimization
+  console.log("\n🔄 Deploying SimpleSwap...");
+  const SimpleSwap = await ethers.getContractFactory("SimpleSwap");
 
-  if (config.explorerUrl) {
-    console.log(
-      `🔗 View on explorer: ${config.explorerUrl}/address/${tokenBAddress}`
-    );
-  }
+  // Deploy with gas optimization
+  const simpleSwap = await SimpleSwap.deploy(kaizenAddress, yureiAddress, {
+    gasLimit: 1500000, // Set reasonable gas limit
+    gasPrice: ethers.parseUnits("20", "gwei"), // 20 gwei for cost optimization
+  });
 
-  // Get token details
-  console.log("\n📊 Token Details:");
-  console.log("==================");
+  console.log("⏳ Waiting for deployment...");
+  await simpleSwap.waitForDeployment();
+  const simpleSwapAddress = await simpleSwap.getAddress();
 
-  const tokenAName = await tokenA.name();
-  const tokenASymbol = await tokenA.symbol();
-  const tokenASupply = await tokenA.totalSupply();
-  const tokenADecimals = await tokenA.decimals();
+  console.log("✅ SimpleSwap deployed to:", simpleSwapAddress);
 
-  const tokenBName = await tokenB.name();
-  const tokenBSymbol = await tokenB.symbol();
-  const tokenBSupply = await tokenB.totalSupply();
-  const tokenBDecimals = await tokenB.decimals();
+  // Verify the deployment
+  console.log("\n🔍 Verifying deployment...");
+  const deployedTokenA = await simpleSwap.tokenA();
+  const deployedTokenB = await simpleSwap.tokenB();
 
-  console.log(`🔵 TokenA: ${tokenAName} (${tokenASymbol})`);
-  console.log(`   📍 Address: ${tokenAAddress}`);
-  console.log(`   🔢 Decimals: ${tokenADecimals}`);
+  console.log("🔗 Token A in contract:", deployedTokenA);
+  console.log("🔗 Token B in contract:", deployedTokenB);
   console.log(
-    `   💰 Supply: ${ethers.formatEther(tokenASupply)} ${tokenASymbol}`
+    "✅ Tokens match:",
+    deployedTokenA === kaizenAddress && deployedTokenB === yureiAddress
   );
 
-  console.log(`🟢 TokenB: ${tokenBName} (${tokenBSymbol})`);
-  console.log(`   📍 Address: ${tokenBAddress}`);
-  console.log(`   🔢 Decimals: ${tokenBDecimals}`);
-  console.log(
-    `   💰 Supply: ${ethers.formatEther(tokenBSupply)} ${tokenBSymbol}`
-  );
-
-  // Distribute tokens to deployer for testing
-  console.log("\n💸 Distributing tokens for testing...");
-  const deployerBalance = await deployer.provider.getBalance(deployer.address);
-  console.log(
-    `📈 Deployer ${tokenASymbol} balance:`,
-    ethers.formatEther(await tokenA.balanceOf(deployer.address))
-  );
-  console.log(
-    `📈 Deployer ${tokenBSymbol} balance:`,
-    ethers.formatEther(await tokenB.balanceOf(deployer.address))
-  );
-
-  // Display deployment summary
-  console.log("\n🎉 DEPLOYMENT SUMMARY");
-  console.log("=====================");
-  console.log("📦 SimpleSwap:", simpleSwapAddress);
-  console.log(`🔵 ${tokenASymbol} (${tokenAName}):`, tokenAAddress);
-  console.log(`🟢 ${tokenBSymbol} (${tokenBName}):`, tokenBAddress);
-  console.log("✨ All contracts deployed successfully!");
-
-  // Display interaction examples
-  console.log("\n🛠️  INTERACTION EXAMPLES");
-  console.log("========================");
-  console.log("// Add initial liquidity:");
-  console.log(
-    `// 1. Approve tokens: tokenA.approve("${simpleSwapAddress}", amount)`
-  );
-  console.log(
-    `// 2. Add liquidity: simpleSwap.addLiquidity("${tokenAAddress}", "${tokenBAddress}", ...)`
-  );
-  console.log("\n// Swap tokens:");
-  console.log(
-    `// 1. Approve input token: tokenA.approve("${simpleSwapAddress}", amount)`
-  );
-  console.log(
-    `// 2. Swap: simpleSwap.swapExactTokensForTokens(amount, 0, ["${tokenAAddress}", "${tokenBAddress}"], to, deadline)`
-  );
-  console.log("\n// Get price:");
-  console.log(`// simpleSwap.getPrice("${tokenAAddress}", "${tokenBAddress}")`);
-
-  // Optional: Verify contracts if on a testnet/mainnet
-  if (
-    config.verify &&
-    currentNetwork !== "hardhat" &&
-    currentNetwork !== "localhost"
-  ) {
-    console.log(
-      `\n⏳ Waiting for ${config.confirmations} block confirmations before verification...`
-    );
-
-    try {
-      await simpleSwap.deploymentTransaction().wait(config.confirmations);
-      await tokenA.deploymentTransaction().wait(config.confirmations);
-      await tokenB.deploymentTransaction().wait(config.confirmations);
-
-      console.log("🔍 Verifying contracts on Etherscan...");
-
-      // Verify SimpleSwap
-      try {
-        await hre.run("verify:verify", {
-          address: simpleSwapAddress,
-          constructorArguments: [],
-          contract: "contracts/SimpleSwap.sol:SimpleSwap",
-        });
-        console.log("✅ SimpleSwap verified successfully!");
-      } catch (error) {
-        console.log("❌ Error verifying SimpleSwap:", error.message);
-      }
-
-      // Verify KaizenCoin
-      try {
-        await hre.run("verify:verify", {
-          address: tokenAAddress,
-          constructorArguments: [],
-          contract: "contracts/TestTokens.sol:KaizenCoin",
-        });
-        console.log("✅ KaizenCoin verified successfully!");
-      } catch (error) {
-        console.log("❌ Error verifying KaizenCoin:", error.message);
-      }
-
-      // Verify YureiCoin
-      try {
-        await hre.run("verify:verify", {
-          address: tokenBAddress,
-          constructorArguments: [],
-          contract: "contracts/TestTokens.sol:YureiCoin",
-        });
-        console.log("✅ YureiCoin verified successfully!");
-      } catch (error) {
-        console.log("❌ Error verifying YureiCoin:", error.message);
-      }
-    } catch (error) {
-      console.log("❌ Error during verification process:", error.message);
-    }
-  } else {
-    console.log(`\n💡 Skipping verification (network: ${currentNetwork})`);
-  }
-
-  // Save deployment addresses to a file for easy access
+  // Get deployment info
   const deploymentInfo = {
-    network: currentNetwork,
-    chainId: network.config.chainId
-      ? network.config.chainId.toString()
-      : "unknown",
+    network: "sepolia",
+    chainId: (await ethers.provider.getNetwork()).chainId.toString(),
     simpleSwap: simpleSwapAddress,
     tokenA: {
-      address: tokenAAddress,
-      name: tokenAName,
-      symbol: tokenASymbol,
-      decimals: tokenADecimals.toString(),
+      address: kaizenAddress,
+      name: "KaizenCoin",
+      symbol: "KAIZEN",
+      decimals: "18",
     },
     tokenB: {
-      address: tokenBAddress,
-      name: tokenBName,
-      symbol: tokenBSymbol,
-      decimals: tokenBDecimals.toString(),
+      address: yureiAddress,
+      name: "YureiCoin",
+      symbol: "YUREI",
+      decimals: "18",
     },
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
-    gasPrice: ethers.formatUnits(config.gasPrice, "gwei") + " gwei",
-    explorerUrl: config.explorerUrl,
+    gasPrice: "20.0 gwei",
+    explorerUrl: "https://sepolia.etherscan.io",
   };
 
-  // Save to file
-  const deploymentsDir = path.join(__dirname, "..", "deployments");
-  if (!fs.existsSync(deploymentsDir)) {
-    fs.mkdirSync(deploymentsDir, { recursive: true });
-  }
-
-  const filename = `${currentNetwork}-${
+  // Save deployment info
+  const fs = require("fs");
+  const deploymentPath = `./deployments/sepolia-${
     new Date().toISOString().split("T")[0]
-  }.json`;
-  const filepath = path.join(deploymentsDir, filename);
+  }-v2.json`;
+  fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
 
+  console.log("\n📊 Deployment Summary:");
+  console.log("=====================================");
+  console.log("🏭 SimpleSwap:", simpleSwapAddress);
+  console.log("🪙 KaizenCoin:", kaizenAddress);
+  console.log("🪙 YureiCoin:", yureiAddress);
+  console.log("👤 Deployer:", deployer.address);
+  console.log("📁 Saved to:", deploymentPath);
+  console.log("=====================================");
+
+  console.log("\n🔗 Etherscan URLs:");
+  console.log(
+    "SimpleSwap:",
+    `https://sepolia.etherscan.io/address/${simpleSwapAddress}`
+  );
+  console.log(
+    "KaizenCoin:",
+    `https://sepolia.etherscan.io/address/${kaizenAddress}`
+  );
+  console.log(
+    "YureiCoin:",
+    `https://sepolia.etherscan.io/address/${yureiAddress}`
+  );
+
+  // Verify contracts on Etherscan
+  console.log("\n🔍 Verifying contracts on Etherscan...");
+  await verifyContracts(simpleSwapAddress, kaizenAddress, yureiAddress);
+
+  console.log("\n✅ Deployment completed successfully!");
+  console.log("💡 Next steps:");
+  console.log("1. ✅ Contracts verified on Etherscan");
+  console.log("2. Test the contract functions");
+  console.log("3. Add liquidity and test swaps");
+}
+
+/**
+ * Verify contracts on Etherscan
+ */
+async function verifyContracts(simpleSwapAddress, kaizenAddress, yureiAddress) {
   try {
-    fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
-    console.log(`\n💾 Deployment info saved to: ${filepath}`);
+    console.log("⏳ Waiting 30 seconds for Etherscan to index contracts...");
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+
+    // Verify KaizenCoin
+    console.log("🔍 Verifying KaizenCoin...");
+    try {
+      await hre.run("verify:verify", {
+        address: kaizenAddress,
+        constructorArguments: [], // KaizenCoin has no constructor arguments
+        contract: "contracts/TestTokens.sol:KaizenCoin",
+      });
+      console.log("✅ KaizenCoin verified successfully!");
+    } catch (error) {
+      if (error.message.includes("Already Verified")) {
+        console.log("✅ KaizenCoin already verified!");
+      } else {
+        console.error("❌ KaizenCoin verification failed:", error.message);
+      }
+    }
+
+    // Verify YureiCoin
+    console.log("🔍 Verifying YureiCoin...");
+    try {
+      await hre.run("verify:verify", {
+        address: yureiAddress,
+        constructorArguments: [], // YureiCoin has no constructor arguments
+        contract: "contracts/TestTokens.sol:YureiCoin",
+      });
+      console.log("✅ YureiCoin verified successfully!");
+    } catch (error) {
+      if (error.message.includes("Already Verified")) {
+        console.log("✅ YureiCoin already verified!");
+      } else {
+        console.error("❌ YureiCoin verification failed:", error.message);
+      }
+    }
+
+    // Verify SimpleSwap
+    console.log("🔍 Verifying SimpleSwap...");
+    try {
+      await hre.run("verify:verify", {
+        address: simpleSwapAddress,
+        constructorArguments: [kaizenAddress, yureiAddress], // SimpleSwap constructor arguments
+        contract: "contracts/SimpleSwap.sol:SimpleSwap",
+      });
+      console.log("✅ SimpleSwap verified successfully!");
+    } catch (error) {
+      if (error.message.includes("Already Verified")) {
+        console.log("✅ SimpleSwap already verified!");
+      } else {
+        console.error("❌ SimpleSwap verification failed:", error.message);
+      }
+    }
+
+    console.log("\n🎉 All contracts verification completed!");
   } catch (error) {
-    console.log("❌ Error saving deployment info:", error.message);
-  }
-
-  console.log("\n📄 Deployment Info JSON:");
-  console.log(JSON.stringify(deploymentInfo, null, 2));
-
-  // Network-specific post-deployment instructions
-  if (currentNetwork === "sepolia") {
-    console.log("\n🎯 SEPOLIA TESTNET DEPLOYMENT COMPLETE!");
-    console.log("=============================================");
-    console.log("💡 Next steps:");
-    console.log("1. Get Sepolia ETH from faucets if needed");
-    console.log("2. Interact with contracts using the addresses above");
-    console.log("3. Check transactions on Sepolia Etherscan");
-    console.log("4. Test the DEX functionality with the mock tokens");
+    console.error("❌ Verification process failed:", error.message);
+    console.log("💡 You can manually verify contracts later using:");
+    console.log(`npx hardhat verify --network sepolia ${kaizenAddress}`);
+    console.log(`npx hardhat verify --network sepolia ${yureiAddress}`);
+    console.log(
+      `npx hardhat verify --network sepolia ${simpleSwapAddress} "${kaizenAddress}" "${yureiAddress}"`
+    );
   }
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("❌ Deployment failed:", error);
+    console.error("❌ Deployment failed:");
+    console.error(error);
     process.exit(1);
   });

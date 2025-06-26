@@ -6,9 +6,9 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "deploy": "npx hardhat run scripts/deploy.js",
-    "deploy-with-tokens": "npx hardhat run scripts/deployWithTokens.js",
     "deploy-sepolia": "npx hardhat run scripts/deployWithTokens.js --network sepolia",
     "deploy-localhost": "npx hardhat run scripts/deployWithTokens.js --network localhost",
+    "verify": "npx hardhat run scripts/verifyContract.js --network sepolia",
     "node": "npx hardhat node"
   },
   "keywords": [
