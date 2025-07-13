@@ -11,35 +11,170 @@ SimpleSwap is a streamlined AMM (Automated Market Maker) that uses the constant 
 ### Install Dependencies
 
 ```bash
-bun install
+npm install
 ```
 
 ### Compile Contracts
 
 ```bash
-bun run compile
+npm run compile
 ```
 
 ### Run Tests
 
 ```bash
-bunx hardhat test
+# Run tests with coverage report (recommended)
+npm test
+
+# Run tests only (without coverage)
+npm run test-only
+
+# Generate coverage report only
+npm run coverage
+```
+
+### Available Scripts
+
+| Script                     | Command                             | Description                    |
+| -------------------------- | ----------------------------------- | ------------------------------ |
+| `npm run compile`          | `npx hardhat compile`               | Compile all smart contracts    |
+| `npm test`                 | `npx hardhat coverage`              | Run tests with coverage report |
+| `npm run test-only`        | `npx hardhat test`                  | Run tests without coverage     |
+| `npm run coverage`         | `npx hardhat coverage`              | Generate coverage report only  |
+| `npm run deploy`           | `npx hardhat run scripts/deploy.js` | Deploy to default network      |
+| `npm run deploy-localhost` | Deploy to localhost network         | Deploy to local hardhat node   |
+| `npm run deploy-sepolia`   | Deploy to Sepolia testnet           | Deploy to Sepolia testnet      |
+| `npm run verify`           | Verify contract on Etherscan        | Verify deployed contract       |
+| `npm run node`             | `npx hardhat node`                  | Start local hardhat node       |
+
+## Testing
+
+The project includes a comprehensive test suite with **29 test cases** covering all contract functionality with excellent coverage:
+
+- **📊 93.62% Statement Coverage**
+- **📊 76.25% Branch Coverage**
+- **📊 85.71% Function Coverage**
+- **📊 93.98% Line Coverage**
+
+### Test Categories
+
+#### **Deployment Tests** (4 tests)
+
+- ✅ Deploys with correct token addresses
+- ✅ Reverts if tokens are identical
+- ✅ Reverts if token address is zero
+- ✅ Initializes with zero reserves and total supply
+
+#### **Liquidity Management Tests** (4 tests)
+
+- ✅ Allows adding initial liquidity
+- ✅ Calculates proportional amounts for subsequent liquidity
+- ✅ Allows removing liquidity
+- ✅ Reverts when removing more liquidity than owned
+
+#### **Token Swapping Tests** (4 tests)
+
+- ✅ Allows swapping tokenA for tokenB
+- ✅ Allows swapping tokenB for tokenA
+- ✅ Reverts with invalid path
+- ✅ Reverts with insufficient output amount
+
+#### **Price and Amount Calculation Tests** (4 tests)
+
+- ✅ Returns correct price
+- ✅ Calculates correct amount out
+- ✅ Reverts getPrice when no liquidity
+- ✅ Reverts getAmountOut with zero input
+
+#### **Pool Info and Balance Tests** (2 tests)
+
+- ✅ Returns correct pool info
+- ✅ Returns correct liquidity balance
+
+#### **Error Handling Tests** (9 tests)
+
+- ✅ Reverts with expired deadline
+- ✅ Reverts when adding liquidity to zero address
+- ✅ Reverts when removing liquidity with insufficient minimum amounts
+- ✅ Reverts when removing zero liquidity
+- ✅ Reverts when removing liquidity from empty pool
+- ✅ Reverts when swapping with zero amount
+- ✅ Reverts when swapping without liquidity
+- ✅ Reverts when swapping identical tokens
+- ✅ Reverts when swapping to zero address
+
+#### **Edge Case Tests** (2 tests)
+
+- ✅ Handles optimal amount calculation branches
+- ✅ Tests getAmountOut with insufficient reserves
+
+### Test Dependencies
+
+The test suite uses:
+
+- **Hardhat** - Ethereum development environment
+- **Ethers.js v6** - Ethereum library
+- **Chai** - Assertion library
+- **Solidity Coverage** - Coverage reporting
+
+### Coverage Reports
+
+After running `npm test` or `npm run coverage`, detailed coverage reports are generated:
+
+- **Terminal Output**: Summary table showing coverage percentages
+- **HTML Report**: `./coverage/index.html` - Interactive coverage report
+- **JSON Report**: `./coverage.json` - Machine-readable coverage data
+
+**Current Coverage:**
+
+```
+-----------------|----------|----------|----------|----------|
+File             |  % Stmts | % Branch |  % Funcs |  % Lines |
+-----------------|----------|----------|----------|----------|
+SimpleSwap.sol   |    93.33 |    76.25 |      100 |    93.83 |
+MockToken.sol    |      100 |      100 |      100 |      100 |
+TestTokens.sol   |      100 |      100 |        0 |      100 |
+-----------------|----------|----------|----------|----------|
+All files        |    93.62 |    76.25 |    85.71 |    93.98 |
+-----------------|----------|----------|----------|----------|
+```
+
+To view the interactive HTML coverage report:
+
+```bash
+open coverage/index.html
+```
+
+### Running Individual Test Categories
+
+```bash
+# Run specific test category
+npx hardhat test --grep "Deployment"
+npx hardhat test --grep "Liquidity Management"
+npx hardhat test --grep "Token Swapping"
+npx hardhat test --grep "Error Cases"
 ```
 
 ### Deploy Locally
 
 ```bash
 # Start local blockchain
-bunx hardhat node
+npx hardhat node
 
 # Deploy (in another terminal)
-bun run deploy-localhost
+npm run deploy-localhost
 ```
 
 ### Deploy to Sepolia
 
 ```bash
-bun run deploy-sepolia
+npm run deploy-sepolia
+```
+
+### Verify Contract
+
+```bash
+npm run verify
 ```
 
 ## Frontend Integration Guide
